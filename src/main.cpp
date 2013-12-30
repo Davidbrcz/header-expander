@@ -23,9 +23,10 @@ using namespace clang::tooling;
 using namespace llvm;
 
 
-
 std::string classToExpand;
-//Rewriter rewriter;
+
+bool addVirtual=false;
+bool addDefaultValue=false;
 
 class BaseVisitor : public RecursiveASTVisitor<BaseVisitor> {
 protected:
@@ -94,7 +95,6 @@ protected:
 		 r2+="throw (";
 		  for(auto ex_it=rawtype->exception_begin();ex_it<rawtype->exception_end();ex_it++)
 		  {
-			std::cout<<ex_it->getAsString()<<std::endl;
 			r2+=ex_it->getAsString()+",";
 		  }
 	        r2.pop_back();
@@ -106,24 +106,38 @@ protected:
 	  }
 	return r2;
    }
+
+  std::string generateFunction(std::string base,CXXMethodDecl* fct)
+  {
+          std::string r2;
+
+	  r2+=(fct->isVirtual() && addVirtual ? " /*virtual*/ " : "");
+	  r2+=ReturnType(fct)+" ";				
+          r2+=base+fct->getNameAsString();
+	  r2+=Arguments(fct,addDefaultValue)+" ";
+          r2+=(fct->isConst() ? " const " : "");
+	  r2+=ExceptionSpecification(fct);
+
+	  r2+="\n{\n}\n";
+	  return r2;
+  } 
 public: 
   explicit BaseVisitor(CompilerInstance *CI,StringRef file) 
     : astContext(&(CI->getASTContext())),
       ctx(nullptr),
       off(file.str(),std::ios::app) // initialize private members
     {
-      //rewriter.setSourceMgr(astContext->getSourceManager(), astContext->getLangOpts());
-      
+     
     }
 
   virtual bool VisitCXXRecordDecl(CXXRecordDecl *dd) {
 
     if(dd->getNameAsString()==classToExpand)
       {
-      ctx=dd;
-      GenerateFunctions();
+	      ctx=dd;
+	      GenerateFunctions();
       }
-       return true;
+     return true;
   }
 
   virtual bool VisitVarDecl(VarDecl* var)
@@ -142,8 +156,42 @@ public:
 
  //namespace AA {namespace BB{...}} instead of AA::BB::
 class PrettyVisitor : public BaseVisitor {
+
+class NamespaceHandler
+{
+	PrettyVisitor& upper_this;
+public :
+	NamespaceHandler(PrettyVisitor& up):upper_this(up)
+	{
+		if(!upper_this.firstNS)
+		{
+		      for(auto ns  : upper_this.namespaces)
+		      {
+			upper_this.off<<"namespace "<<ns<<" {"<<std::endl;
+		      }    
+		}
+	}
+	~NamespaceHandler()
+	{
+		if(!upper_this.firstNS)
+		{
+		      //closse namespace
+		      for(std::size_t i =0;i <upper_this.namespaces.size();++i)
+		      {
+			upper_this.off<<"}"<<std::endl;
+		      }    
+		}
+		else
+		{
+			upper_this.rewriter.overwriteChangedFiles();
+		}
+	}
+};
 protected:
   CXXRecordDecl* topClass;
+  NamespaceDecl* firstNS;
+  Rewriter rewriter;
+  std::vector<std::string> namespaces;
 
   //check for nested-namespace
   //requieres that NestedClassesCheck have ben performed before
@@ -153,7 +201,16 @@ protected:
 
        if(topClass)
        {
+
          NamespaceDecl* current_ns=dyn_cast<NamespaceDecl>(topClass->getParent());
+	 
+	if(current_ns!=nullptr)
+         {
+	 int count=0;
+	 for(auto it = current_ns->redecls_begin();it != current_ns->redecls_end();++it,++count);
+         firstNS=(count>1) ? current_ns->getMostRecentDecl() : nullptr;
+	 }
+
          while(current_ns)
          {
           //namesp.insert(0,current_ns->getNameAsString()+"::");
@@ -181,50 +238,36 @@ protected:
      }
 
   void GenerateFunctions()
-    {      
+    { 
       std::string classes = NestedClassesCheck();
-      std::vector<std::string> namespaces = NestedNamespaceCheck();
+      namespaces= NestedNamespaceCheck();
+
+      //print namespace in cts and close them in dst
+      NamespaceHandler handler(*this);
 
       const std::string base=classes+ctx->getNameAsString()+"::";      
-      //print namespace
-      for(auto ns  : namespaces)
-      {
-	off<<"namespace "<<ns<<" {"<<std::endl;
-      }    
-
       for(auto fct = ctx->method_begin();fct!=ctx->method_end();++fct)
       {
         if(!fct->hasBody() && fct->isUserProvided() && !fct->isPure())
         {
-          std::string r2;
+ 	std::string r2=generateFunction(base,*fct);
 
-	  r2+=ReturnType(*fct)+" ";				
-          r2+=base+fct->getNameAsString();
-	  r2+=Arguments(*fct,true)+" ";
-          r2+=(fct->isConst() ? " const " : "");
-	  r2+=ExceptionSpecification(*fct);
+	if(firstNS)
+          rewriter.InsertTextBefore(firstNS->getLocEnd(),r2);
+	else 
+	  off<<r2<<std::endl;
 
-	  r2+="\n{\n}\n";
-          off<<r2<<std::endl;
-	 
-          //off2.InsertTextBefore(off2.end(),r2);
-          //rewriter.InsertText(ctx->getLocEnd(),r2);
-          std::cout<<"----------"<<std::endl;
         }
       }
-
-       //closse namespace
-      for(int i =0;i <namespaces.size();++i)
-      {
-	off<<"}"<<std::endl;
-      }    
-
+	
     }
 public: 
   explicit PrettyVisitor(CompilerInstance *CI,StringRef file) 
     : BaseVisitor(CI,file),
       topClass(nullptr)
-    {}
+    {
+	rewriter.setSourceMgr(astContext->getSourceManager(), astContext->getLangOpts());  
+    }
 };
 
 class RawVisitor : public BaseVisitor {
@@ -236,19 +279,9 @@ private:
       {
         if(!fct->hasBody() && fct->isUserProvided() && !fct->isPure())
         {
-          std::string r2;
-
-	  r2+=ReturnType(*fct)+" ";				
-          r2+=base+fct->getNameAsString();
-	  r2+=Arguments(*fct,true)+" ";
-          r2+=(fct->isConst() ? " const " : "");
-	  r2+=ExceptionSpecification(*fct);
-
-	  r2+="\n{\n}\n";
+          std::string r2=generateFunction(base,*fct);
           off<<r2<<std::endl;
-	 
-          //off2.InsertTextBefore(off2.end(),r2);
-          //rewriter.InsertText(ctx->getLocEnd(),r2);
+	
           std::cout<<"----------"<<std::endl;
         }
       }
@@ -288,12 +321,17 @@ public:
 
 
 int main(int argc, const char **argv) {
-  cl::opt<std::string> optClassToExpand("cl-exp", cl:: NotHidden,cl::desc("Class to Expand"));
+  cl::opt<std::string> optClassToExpand("class-to-expand", cl:: NotHidden,cl::desc("Class to Expand"));
+  cl::opt<bool> optAddDefaultValue("add-default-value", cl:: NotHidden,cl::desc("If true, add a comment to remind the default value"));
+  cl::opt<bool> optAddVirtual("add-remind-virtual", cl:: NotHidden,cl::desc("If true, add a comment to remind the function is virtual"));
 
   // parse the command-line args passed to your code
   CommonOptionsParser op(argc, argv);    
   classToExpand=optClassToExpand;
-  std::cout<<"=============="<<std::endl;
+  addVirtual= optAddVirtual;
+  addDefaultValue= optAddDefaultValue;
+   
+  std::cout<<"===Go==="<<std::endl;
 
   const auto& sources=op.getSourcePathList();
   if(sources.size()!=1){
@@ -305,6 +343,8 @@ int main(int argc, const char **argv) {
     
   // run the Clang Tool, creating a new FrontendAction (explained below)
   int result = Tool.run(newFrontendActionFactory<ExampleFrontendAction>());
-   
+  
+
+
   return result;
 }

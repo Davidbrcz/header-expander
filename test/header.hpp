@@ -1,4 +1,5 @@
 #include <string>
+
 namespace AA
 {
   namespace BB
@@ -49,13 +50,4 @@ namespace AA
     }; //-- D 
   } //-- BB
 } //-- AA 
-/*
-struct D
-{
-  struct E
-  {
-    void EE(AA::BB::D::A& a);
-  };
-};
 
-*/

@@ -8,7 +8,6 @@ set(CMAKE_MODULE_PATH     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/Modules/")
 
 set(CMAKE_CXX_FLAGS "-DNDEBUG -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -grecord-gcc-switches  -m64 -mtune=generic -fomit-frame-pointer -std=c++11 -fvisibility-inlines-hidden -fno-exceptions -fPIC -Woverloaded-virtual -Wcast-qual")
 
-#find_package(LibClang REQUIRED)
 
 link_directories(/usr/lib64/llvm)
 
