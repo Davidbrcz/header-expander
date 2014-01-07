@@ -60,7 +60,7 @@ void PrettyVisitor::generateAFunctions()
   //print namespace in cts and close them in dst
   NamespaceHandler handler(*this);
 
-  const std::string base=classes+ctx->getNameAsString()+"::";      
+  const std::string base=classes+ctx->getNameAsString();      
   for(auto fct = ctx->method_begin();fct!=ctx->method_end();++fct)
   {
     if(!fct->hasBody() && fct->isUserProvided() && !fct->isPure())
@@ -80,5 +80,5 @@ PrettyVisitor::PrettyVisitor(CompilerInstance *CI,StringRef file)
   : BaseVisitor(CI,file),
     topClass(nullptr)
 {
-  rewriter.setSourceMgr(astContext->getSourceManager(), astContext->getLangOpts());  
+  rewriter.setSourceMgr(astContext.getSourceManager(), astContext.getLangOpts());  
 }

@@ -20,15 +20,24 @@
 #include "options.h"
 
 class BaseVisitor : public clang::RecursiveASTVisitor<BaseVisitor> {
+	struct TemplateInfoHolding
+	{
+		bool isTemplateClass=false;
+  		clang::ClassTemplateDecl* templateClass=nullptr;
+		std::string baseTemplate="template ";
+		std::string listTemplate="<";
+	};
 
+	TemplateInfoHolding templateInfos;
 protected:
   // hold additionnal info
   // is used to extract source code from file
   // and to check if a function is noexcept	
-  clang::ASTContext *astContext; 
+  clang::ASTContext& astContext; 
 
   //pointer to the class we have to expand
   clang::CXXRecordDecl* ctx;
+ 
  
   //file where we can write changes
   std::ofstream outputFile;
@@ -37,6 +46,7 @@ protected:
   //main idea was taken from SO
   std::string pos2str(clang::SourceLocation begin,clang::SourceLocation end);
 
+  	
   virtual void generateAFunctions() =0;
   
  //generate the return type for fct
@@ -48,6 +58,9 @@ protected:
    //generate the exception specifier for fct
    std::string ExceptionSpecification(clang::CXXMethodDecl* fct);
    std::string generateAFunction(std::string base,clang::CXXMethodDecl* fct);
+   void GenerateTemplateInfos();
+
+   std::string TemplateList(clang::CXXMethodDecl* fct);
 public: 
   explicit BaseVisitor(clang::CompilerInstance *CI,llvm::StringRef file);
   virtual bool VisitCXXRecordDecl(clang::CXXRecordDecl *dd);

@@ -6,7 +6,7 @@ class RawVisitor : public BaseVisitor {
 private:
     void generateAFunctions()
     {      
-      const std::string base=ctx->getQualifiedNameAsString()+"::";      
+      const std::string base=ctx->getQualifiedNameAsString();      
       for(auto fct = ctx->method_begin();fct!=ctx->method_end();++fct)
       {
         if(!fct->hasBody() && fct->isUserProvided() && !fct->isPure())

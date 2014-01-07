@@ -19,12 +19,26 @@ using namespace llvm;
 
 #include <fstream>
 #include <string>
+#include <iostream>
+
+
+namespace
+{
+	bool isSpecialMemberFunction(clang::CXXMethodDecl* fct)
+	{
+	    if(isa<CXXConstructorDecl>(*fct) || isa<CXXDestructorDecl>(*fct) || isa<CXXConversionDecl>(*fct))
+		return true;
+	    else
+		return false;
+    
+	}
+}
 
 //return the code between begin and end
 //main idea was taken from SO
 std::string BaseVisitor::pos2str(SourceLocation begin,SourceLocation end) {
-  auto& sm =astContext->getSourceManager();
-  clang::SourceLocation e(clang::Lexer::getLocForEndOfToken(end, 0, sm, astContext->getLangOpts()));
+  auto& sm =astContext.getSourceManager();
+  clang::SourceLocation e(clang::Lexer::getLocForEndOfToken(end, 0, sm, astContext.getLangOpts()));
   return std::string(sm.getCharacterData(begin),
                      sm.getCharacterData(e)-sm.getCharacterData(begin));
 }
@@ -32,18 +46,14 @@ std::string BaseVisitor::pos2str(SourceLocation begin,SourceLocation end) {
 //generate the return type for fct
 std::string BaseVisitor::ReturnType(CXXMethodDecl* fct)
 {
-  if( !   (isa<CXXConstructorDecl>(*fct) || 
-           isa<CXXDestructorDecl>(*fct) || 
-           isa<CXXConversionDecl>(*fct)
-        )
-    )
+  if(!isSpecialMemberFunction(fct))
   {	
     // TODO : see if clang has a paramter to NOT add
     // struct/class on a return type
 
 
     //r2+=fct.getResultType().getAsString()+" ";
-    auto  el_type=fct->getResultType().getDesugaredType(*astContext);
+    auto  el_type=fct->getResultType().getDesugaredType(astContext);
     return el_type.getAsString();
   }
   else
@@ -91,7 +101,7 @@ std::string BaseVisitor::ExceptionSpecification(CXXMethodDecl* fct)
     r2.pop_back();
     r2+=")";
   }
-  else if(rawtype->isNothrow(*astContext))
+  else if(rawtype->isNothrow(astContext))
   {
     r2+=" noexcept ";
   }
@@ -102,9 +112,15 @@ std::string BaseVisitor::generateAFunction(std::string base,CXXMethodDecl* fct)
 {
   std::string r2;
 
+  //hold template class
+  r2+=(templateInfos.isTemplateClass ? templateInfos.baseTemplate : "")+ " ";
+
   r2+=(fct->isVirtual() && Myoptions::addVirtual ? " /*virtual*/ " : "");
   r2+=ReturnType(fct)+" ";				
-  r2+=base+fct->getNameAsString();
+  r2+=base;
+  r2+=TemplateList(fct);
+  r2+="::";	
+  r2+=fct->getNameAsString();
   r2+=Arguments(fct,Myoptions::addDefaultValue)+" ";
   r2+=(fct->isConst() ? " const " : "");
   r2+=ExceptionSpecification(fct);
@@ -114,7 +130,7 @@ std::string BaseVisitor::generateAFunction(std::string base,CXXMethodDecl* fct)
 } 
 
 BaseVisitor::BaseVisitor(CompilerInstance *CI,StringRef file) 
-  : astContext(&(CI->getASTContext())),
+  : astContext(CI->getASTContext()),
     ctx(nullptr),
     outputFile(file.str(),std::ios::app) 
 {
@@ -125,6 +141,7 @@ bool BaseVisitor::VisitCXXRecordDecl(CXXRecordDecl *dd) {
   if(dd->getNameAsString()==Myoptions::classToExpand)
   {
     ctx=dd;
+    GenerateTemplateInfos();
     generateAFunctions();
   }
   return true;
@@ -144,3 +161,33 @@ bool BaseVisitor::VisitVarDecl(VarDecl* var)
 }
 
 
+
+void BaseVisitor::GenerateTemplateInfos() 
+{
+	templateInfos.templateClass=ctx->getDescribedClassTemplate();
+    	if(templateInfos.templateClass)
+    	{
+		templateInfos.isTemplateClass=true; 
+	    
+		auto list=templateInfos.templateClass->getTemplateParameters();
+		templateInfos.baseTemplate+=pos2str(list->getLAngleLoc(),list->getRAngleLoc()); 
+	 
+	
+		for(auto it : *list)
+			templateInfos.listTemplate+=it->getNameAsString()+",";
+
+		if(list->begin()!=list->end())
+		  templateInfos.listTemplate.pop_back();
+
+		templateInfos.listTemplate+=">";
+		//std::cout<<templateInfos.baseTemplate<<"\t"<<templateInfos.listTemplate<<std::endl;
+	}
+}
+
+std::string BaseVisitor::TemplateList(clang::CXXMethodDecl* fct)
+{
+	if(!isSpecialMemberFunction(fct))
+		return templateInfos.listTemplate;
+	else
+		return "";
+}
