@@ -60,7 +60,7 @@ protected:
    std::string generateAFunction(std::string base,clang::CXXMethodDecl* fct);
    void GenerateTemplateInfos();
 
-   std::string TemplateList(clang::CXXMethodDecl* fct);
+   std::string getNameAndRemoveTemplateList(clang::CXXMethodDecl* fct);
 public: 
   explicit BaseVisitor(clang::CompilerInstance *CI,llvm::StringRef file);
   virtual bool VisitCXXRecordDecl(clang::CXXRecordDecl *dd);

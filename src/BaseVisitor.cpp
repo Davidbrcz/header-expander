@@ -32,6 +32,20 @@ namespace
 		return false;
     
 	}
+
+	std::string removeExtrakeyword(std::string s)
+	{
+		static std::string keywords[]={"struct","class","union"};
+		for(auto w : keywords)
+		{
+			auto it = s.find(w);
+			if(it!=std::string::npos)
+			{
+				s.erase(it,w.length()+1);
+			}
+		}
+		return s;
+	}
 }
 
 //return the code between begin and end
@@ -116,14 +130,19 @@ std::string BaseVisitor::generateAFunction(std::string base,CXXMethodDecl* fct)
   r2+=(templateInfos.isTemplateClass ? templateInfos.baseTemplate : "")+ " ";
 
   r2+=(fct->isVirtual() && Myoptions::addVirtual ? " /*virtual*/ " : "");
-  r2+=ReturnType(fct)+" ";				
+  r2+=std::move(removeExtrakeyword(ReturnType(fct)))+" ";				
   r2+=base;
-  r2+=TemplateList(fct);
+
+  //r2+=TemplateList(fct);
+  r2+=(templateInfos.isTemplateClass ? templateInfos.listTemplate : "");
+
   r2+="::";	
-  r2+=fct->getNameAsString();
+  //r2+=fct->getDeclName().getAsString();
+  r2+=getNameAndRemoveTemplateList(fct);
+
   r2+=Arguments(fct,Myoptions::addDefaultValue)+" ";
   r2+=(fct->isConst() ? " const " : "");
-  r2+=ExceptionSpecification(fct);
+  //r2+=ExceptionSpecification(fct);
 
   r2+="\n{\n}\n";
   return r2;
@@ -138,7 +157,7 @@ BaseVisitor::BaseVisitor(CompilerInstance *CI,StringRef file)
 }
 
 bool BaseVisitor::VisitCXXRecordDecl(CXXRecordDecl *dd) {
-  if(dd->getNameAsString()==Myoptions::classToExpand)
+  if(dd->getDeclName().getAsString()==Myoptions::classToExpand)
   {
     ctx=dd;
     GenerateTemplateInfos();
@@ -184,10 +203,16 @@ void BaseVisitor::GenerateTemplateInfos()
 	}
 }
 
-std::string BaseVisitor::TemplateList(clang::CXXMethodDecl* fct)
+std::string BaseVisitor::getNameAndRemoveTemplateList(clang::CXXMethodDecl* fct)
 {
-	if(!isSpecialMemberFunction(fct))
-		return templateInfos.listTemplate;
-	else
-		return "";
+	std::string s=fct->getDeclName().getAsString();
+
+	if( (isa<CXXConstructorDecl>(*fct) || isa<CXXDestructorDecl>(*fct)) && templateInfos.isTemplateClass)
+		{
+			auto it1= s.find("<");
+			auto it2= s.find(">");
+			s.erase(it1,it2-it1+1);
+		}
+	
+	return s;
 }
