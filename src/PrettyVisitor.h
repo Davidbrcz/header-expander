@@ -2,6 +2,7 @@
 #define PRETTY_VISITOR
 
 #include "BaseVisitor.h"
+#include "options.h"
 
 //Write pretty classes. If classe is namespace BB{ class C{void foo ();} }
 // it will create  namespace BB{void C::foo(){}} instead of void BB::C::foo(){}
@@ -29,9 +30,15 @@ class PrettyVisitor : public BaseVisitor {
 				if(!upper_this.enclosingNSRedeclaration)
 				{
 				      //closse namespace
-				      for(std::size_t i =0;i <upper_this.namespaces.size();++i)
+				      //for(std::size_t i =0;i <upper_this.namespaces.size();++i)
+				      for(auto it_ns = upper_this.namespaces.rbegin() ; it_ns != upper_this.namespaces.rend();++it_ns)
 				      {
-					upper_this.outputFile<<"}"<<std::endl;
+					upper_this.outputFile<<"}";
+
+					if(Myoptions::commentClosingNamespace)
+						upper_this.outputFile<<"// end namespace "<<*it_ns;
+
+					upper_this.outputFile<<std::endl;
 				      }    
 				}
 				else
