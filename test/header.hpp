@@ -7,7 +7,7 @@ namespace AA
     //struct D{
 	
       struct A{};
-      template <class TT,int N> 
+       template <class TT,int N> 
       class C
       {
       public :
@@ -47,7 +47,7 @@ namespace AA
         //template, so no
         template <class T> void bar();
 	}; //-- C 
-//using G=C<int>;		
+			
     //}; //-- D 
   } //-- BB
 } //-- AA 

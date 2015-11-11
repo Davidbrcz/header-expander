@@ -67,7 +67,7 @@ std::string BaseVisitor::ReturnType(CXXMethodDecl* fct)
 
 
     //r2+=fct.getResultType().getAsString()+" ";
-    auto  el_type=fct->getResultType().getDesugaredType(astContext);
+    auto  el_type=fct->getCallResultType().getDesugaredType(astContext);
     return el_type.getAsString();
   }
   else

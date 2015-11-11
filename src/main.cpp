@@ -5,6 +5,7 @@
 #include <fstream>
 #include <cassert>
 #include <algorithm>
+#include <memory>
 
 #include "PrettyVisitor.h"
 #include "RawVisitor.h"
@@ -44,8 +45,9 @@ public:
 
 class HeaderExpanderFrontendAction : public ASTFrontendAction {
 public:
-  virtual ASTConsumer *CreateASTConsumer(CompilerInstance &CI, StringRef file) {
-    return new HeaderExpanderConsumer(&CI,file); // pass CI pointer to ASTConsumer
+    virtual std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI, StringRef file) {
+	// pass CI pointer to ASTConsumer
+	return std::make_unique<HeaderExpanderConsumer>(&CI,file); 
   }
 };
 
@@ -57,9 +59,10 @@ int main(int argc, const char **argv) {
   cl::opt<bool> optAddDefaultValue("add-default-value", cl:: NotHidden,cl::desc("If set, add a comment to remind the default value"));
   cl::opt<bool> optAddVirtual("add-remind-virtual", cl:: NotHidden,cl::desc("If set, add a comment to remind the function is virtual"));
   cl::opt<bool> optPretty("pretty-expand", cl:: NotHidden,cl::desc("If set, do a pretty expad"));
-
+  cl::OptionCategory MyToolCategory("My tool options");
+ 
   // parse the command-line args passed to your code
-  CommonOptionsParser op(argc, argv);   
+  CommonOptionsParser op(argc, argv,MyToolCategory);   
 
   // get back options' values 
   Myoptions::classToExpand=optClassToExpand;
@@ -78,7 +81,9 @@ int main(int argc, const char **argv) {
   ClangTool Tool(op.getCompilations(), op.getSourcePathList());
     
   // run the Clang Tool, creating a new FrontendAction (explained below)
-  int result = Tool.run(newFrontendActionFactory<HeaderExpanderFrontendAction>());
+  int result = Tool.run(
+      newFrontendActionFactory<HeaderExpanderFrontendAction>().get()
+      );
 
   return result;
 }
