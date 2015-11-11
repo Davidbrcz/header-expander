@@ -5,6 +5,7 @@ namespace Myoptions{
 extern std::string classToExpand;
 extern bool addVirtual;
 extern bool addDefaultValue;
+extern bool commentClosingNamespace;
 };
 
 #endif

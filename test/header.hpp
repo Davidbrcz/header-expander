@@ -7,6 +7,7 @@ namespace AA
     //struct D{
 	
       struct A{};
+
        template <class TT,int N> 
       class C
       {

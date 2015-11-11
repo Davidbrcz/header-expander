@@ -15,6 +15,7 @@ namespace Myoptions{
 	bool addVirtual=false;
 	bool addDefaultValue=false;
 	bool pretty=false;
+	bool commentClosingNamespace=false;
 };
 
 
@@ -56,11 +57,15 @@ int main(int argc, const char **argv) {
 
 
   cl::opt<std::string> optClassToExpand("class-to-expand", cl:: NotHidden,cl::desc("Class to Expand"));
-  cl::opt<bool> optAddDefaultValue("add-default-value", cl:: NotHidden,cl::desc("If set, add a comment to remind the default value"));
-  cl::opt<bool> optAddVirtual("add-remind-virtual", cl:: NotHidden,cl::desc("If set, add a comment to remind the function is virtual"));
+  cl::opt<bool> optAddDefaultValue("default-value", cl:: NotHidden,cl::desc("If set, add a comment to remind the default value"));
+  cl::opt<bool> optAddVirtual("remind-virtual", cl:: NotHidden,cl::desc("If set, add a comment to remind the function is virtual"));
   cl::opt<bool> optPretty("pretty-expand", cl:: NotHidden,cl::desc("If set, do a pretty expad"));
+  cl::opt<bool> optCloseNs("comment-close-ns", cl:: NotHidden,cl::desc("If set, add a comment on closing the namespaces"));
+
   cl::OptionCategory MyToolCategory("My tool options");
  
+
+  
   // parse the command-line args passed to your code
   CommonOptionsParser op(argc, argv,MyToolCategory);   
 
@@ -69,6 +74,7 @@ int main(int argc, const char **argv) {
   Myoptions::addVirtual= optAddVirtual;
   Myoptions::addDefaultValue= optAddDefaultValue;
   Myoptions::pretty  = optPretty;
+  Myoptions::commentClosingNamespace  = optCloseNs;
 
   std::cout<<"===Go==="<<std::endl;
 
