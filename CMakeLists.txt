@@ -11,10 +11,16 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pipe -Wall -fexceptions -fstack-protect
 
 #include_directories( ${LLVM_INCLUDE_DIRS} )
 link_directories( ${LLVM_LIBRARY_DIRS} )
+#find_package(LLVM REQUIRED)
+
+#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+#cmake_policy(SET CMP0012 NEW)
+#find_package(Clang REQUIRED)
+
 # find_program(CONFIGURATOR "llvm-config-64")
 # execute_process(COMMAND "${CONFIGURATOR} --libs" LIBS)
 
-set (LIBS
+  set (LIBS
     clangFrontend 
     clangSerialization 
     clangDriver 
@@ -37,7 +43,8 @@ set (LIBS
     clangAnalysis
     clangRewriteFrontend 
     clangRewrite 
-#    llvm
+    #    llvm
+
     LLVMOption 
     LLVMMC 
     LLVMObject 
@@ -46,7 +53,8 @@ set (LIBS
     LLVMCore 
     LLVMSupport 
     #    LLVM-3.4
-    LLVMARMAsmParser
+    #LLVMARMAsmParser
+    LLVMMCParser
     tinfo
     z pthread ffi dl m 
 )
@@ -69,6 +77,8 @@ add_executable(
 
 ##Configuration de l'édition de liens
 target_link_libraries(
-        app
-        ${LIBS}
+  app
+  ${LIBS}
+        #${LLVM_AVAILABLE_LIB}
+	#${CLANG_LIBS}
 )
