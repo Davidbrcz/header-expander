@@ -1,26 +1,33 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.8)
+
 
 #Déclaration du projet
 project(header-expander)
 
-set(EXECUTABLE_OUTPUT_PATH bin/    ${CMAKE_BUILD_TYPE})
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+endif(CCACHE_FOUND)
+  
+find_package(LLVM REQUIRED CONFIG)
 
-add_definitions(-D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS)
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pipe -Wall -fexceptions -fstack-protector --param=ssp-buffer-size=4 -grecord-gcc-switches  -m64 -mtune=generic -fomit-frame-pointer -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fPIC -Woverloaded-virtual -Wcast-qual")
-
-#include_directories( ${LLVM_INCLUDE_DIRS} )
+include_directories(${LLVM_INCLUDE_DIRS})
+add_definitions(${LLVM_DEFINITIONS})
 link_directories( ${LLVM_LIBRARY_DIRS} )
-#find_package(LLVM REQUIRED)
 
-#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
-#cmake_policy(SET CMP0012 NEW)
-#find_package(Clang REQUIRED)
 
-# find_program(CONFIGURATOR "llvm-config-64")
-# execute_process(COMMAND "${CONFIGURATOR} --libs" LIBS)
+set(EXECUTABLE_OUTPUT_PATH bin/  ${CMAKE_BUILD_TYPE})
 
-  set (LIBS
+execute_process(COMMAND "llvm-config --cppflags" OUTPUT_VARIABLE RESULT_VARIABLE)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${RESULT_VARIABLE} -std=c++14")
+
+
+set (LIBS
+    #clang
     clangFrontend 
     clangSerialization 
     clangDriver 
@@ -29,7 +36,6 @@ link_directories( ${LLVM_LIBRARY_DIRS} )
     clangSema 
     clangAnalysis 
     clangRewriteFrontend
-#    clangRewriteCore 
     clangEdit 
     clangAST 
     clangLex 
@@ -43,21 +49,16 @@ link_directories( ${LLVM_LIBRARY_DIRS} )
     clangAnalysis
     clangRewriteFrontend 
     clangRewrite 
-    #    llvm
 
+    #llvm
     LLVMOption 
     LLVMMC 
     LLVMObject 
     LLVMBitReader 
-    LLVMAsmParser
     LLVMCore 
     LLVMSupport 
-    #    LLVM-3.4
-    #LLVMARMAsmParser
     LLVMMCParser
-    tinfo
-    z pthread ffi dl m 
-)
+ )
 
 
 #Génération de la liste des fichiers sources
@@ -66,8 +67,6 @@ file(
         source_files
         src/*
 )
-
-
 
 ##Déclaration de l'exécutable
 add_executable(
@@ -79,6 +78,4 @@ add_executable(
 target_link_libraries(
   app
   ${LIBS}
-        #${LLVM_AVAILABLE_LIB}
-	#${CLANG_LIBS}
 )
