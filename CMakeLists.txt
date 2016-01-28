@@ -13,7 +13,7 @@ endif(CCACHE_FOUND)
 find_package(LLVM REQUIRED CONFIG)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}") 
 
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
@@ -22,12 +22,16 @@ link_directories( ${LLVM_LIBRARY_DIRS} )
 
 set(EXECUTABLE_OUTPUT_PATH bin/  ${CMAKE_BUILD_TYPE})
 
-execute_process(COMMAND "llvm-config --cppflags" OUTPUT_VARIABLE RESULT_VARIABLE)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${RESULT_VARIABLE} -std=c++14")
+find_program (REAL_LLVM_CONFIG "llvm-config-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
+message(STATUS "Found: ${REAL_LLVM_CONFIG}")
 
+execute_process(COMMAND "${REAL_LLVM_CONFIG}" --cppflags OUTPUT_VARIABLE MYCPP_LLVM_FLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
+message(STATUS "Using llvm-config for: ${MYCPP_LLVM_FLAGS}")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 ${MYCPP_LLVM_FLAGS}")
 
 set (LIBS
-    #clang
+  #clang
     clangFrontend 
     clangSerialization 
     clangDriver 
@@ -37,7 +41,6 @@ set (LIBS
     clangAnalysis 
     clangRewriteFrontend
     clangEdit 
-    clangAST 
     clangLex 
     clangBasic 
     clang
@@ -48,8 +51,11 @@ set (LIBS
     clangStaticAnalyzerCore
     clangAnalysis
     clangRewriteFrontend 
-    clangRewrite 
+    clangRewrite
+    clangAST
+    clangQuery
 
+    
     #llvm
     LLVMOption 
     LLVMMC 
